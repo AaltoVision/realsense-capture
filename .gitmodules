@@ -1,0 +1,3 @@
+[submodule "odometry"]
+	path = odometry
+	url = git@github.com:dazzlingai/odometry.git
