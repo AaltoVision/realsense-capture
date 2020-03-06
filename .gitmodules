@@ -1,3 +1,6 @@
 [submodule "odometry"]
 	path = odometry
 	url = git@github.com:dazzlingai/odometry.git
+[submodule "librealsense"]
+	path = librealsense
+	url = git@github.com:IntelRealSense/librealsense.git
