@@ -5,6 +5,7 @@
 #include <recorder.hpp>
 #include <iostream>
 #include <iomanip>
+#include <chrono>
 
 
 void printPoseData(rs2_pose pose_data) {
@@ -25,8 +26,31 @@ void printPoseData(rs2_pose pose_data) {
         ;
 }
 
+std::unique_ptr<API::Pose> convertPose(rs2_pose pose_data, double time) {
+    auto dazzling_pose = std::unique_ptr<API::Pose>(new API::Pose());
+    dazzling_pose->time = time;
+    dazzling_pose->position = {
+        pose_data.translation.x,
+        pose_data.translation.y,
+        pose_data.translation.z
+    };
+    dazzling_pose->orientation = {
+        pose_data.rotation.x,
+        pose_data.rotation.y,
+        pose_data.rotation.z,
+        pose_data.rotation.w
+    };
+    return dazzling_pose;
+}
+
 
 int main(int argc, char * argv[]) try {
+
+    std::cout << "Connecting to device...\n";
+
+    
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
     // Create a configuration for configuring the pipeline with a non default profile
@@ -50,10 +74,12 @@ int main(int argc, char * argv[]) try {
     // Start pipeline with chosen configuration
     pipe.start(cfg);
 
+    std::cout << "Device connected\n";
+
     auto recorder = recorder::Recorder::build("output/recording"); // TODO: Read from args
 
     // Main loop
-    while (true)     {
+    while (std::cin.peek() == EOF)     {
         // Wait for the next set of frames from the camera
         auto frames = pipe.wait_for_frames();
         // Get a frame from the pose stream
@@ -63,9 +89,33 @@ int main(int argc, char * argv[]) try {
 
         // Print the x, y, z values of the translation, relative to initial position
         printPoseData(pose_data);
+
+        std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - startTime;
+
+        recorder->addGroundTruth({
+            .time = time.count(),
+            .position = {
+                .x = pose_data.translation.x,
+                .y = pose_data.translation.y,
+                .z = pose_data.translation.z
+            },
+            .orientation = {                
+                .x = pose_data.rotation.x,
+                .y = pose_data.rotation.y,
+                .z = pose_data.rotation.z,
+                .w = pose_data.rotation.w
+            }
+        });
         //std::cout << "\r" << "Device Position: " << std::setprecision(3) << std::fixed << pose_data.translation.x << " " <<
         //    pose_data.translation.y << " " << pose_data.translation.z << " (meters)";
     }
+    std::cout << "\n";
+
+    std::cout << "Closing files\n";
+
+    recorder->closeOutputFile();
+
+    std::cout << "Exiting...\n";
     
     return EXIT_SUCCESS;
 
