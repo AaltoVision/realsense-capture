@@ -6,10 +6,17 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
-#include <thread>
 #include <string>
+#include <iomanip>
+#include <sstream>
 
-std::atomic<bool> userTerminated(false);
+std::string currentISO8601TimeUTC() {
+  auto now = std::chrono::system_clock::now();
+  auto itt = std::chrono::system_clock::to_time_t(now);
+  std::ostringstream ss;
+  ss << std::put_time(gmtime(&itt), "%FT%TZ");
+  return ss.str();
+}
 
 void printPoseData(rs2_pose& pose_data, double time) {
     /*  
@@ -62,9 +69,7 @@ int main(int argc, char * argv[]) try {
     // Native stream of accelerometer motion data produced by RealSense device
     cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
 
-    std::cout << "Device connected\n";
-
-    auto recorder = recorder::Recorder::build("output/recording"); // TODO: Read from args
+    auto recorder = recorder::Recorder::build("output/recording-" + currentISO8601TimeUTC());
 
     // Start pipeline with chosen configuration
     auto profile = pipe.start(cfg, [&](rs2::frame frame) {
@@ -117,8 +122,6 @@ int main(int argc, char * argv[]) try {
             });
         }
     });
-
-    std::cout << "Recording!\n";
 
     std::cout << "!!! Press Enter to stop !!!\n";
 
