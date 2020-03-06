@@ -6,7 +6,10 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <thread>
+#include <string>
 
+std::atomic<bool> userTerminated(false);
 
 void printPoseData(rs2_pose pose_data) {
     /*  
@@ -26,6 +29,7 @@ void printPoseData(rs2_pose pose_data) {
         ;
 }
 
+/*
 std::unique_ptr<API::Pose> convertPose(rs2_pose pose_data, double time) {
     auto dazzling_pose = std::unique_ptr<API::Pose>(new API::Pose());
     dazzling_pose->time = time;
@@ -42,13 +46,11 @@ std::unique_ptr<API::Pose> convertPose(rs2_pose pose_data, double time) {
     };
     return dazzling_pose;
 }
+*/
 
-
-int main(int argc, char * argv[]) try {
-
+void record() {
     std::cout << "Connecting to device...\n";
 
-    
     auto startTime = std::chrono::high_resolution_clock::now();
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
@@ -78,8 +80,12 @@ int main(int argc, char * argv[]) try {
 
     auto recorder = recorder::Recorder::build("output/recording"); // TODO: Read from args
 
+    std::cout << "Recording!\n";
+
+    std::cout << "!!! Press Enter to stop !!!\n";
+
     // Main loop
-    while (std::cin.peek() == EOF)     {
+    while (userTerminated == false)     {
         // Wait for the next set of frames from the camera
         auto frames = pipe.wait_for_frames();
         // Get a frame from the pose stream
@@ -114,8 +120,21 @@ int main(int argc, char * argv[]) try {
     std::cout << "Closing files\n";
 
     recorder->closeOutputFile();
+}
 
-    std::cout << "Exiting...\n";
+int main(int argc, char * argv[]) try {
+
+    std::thread recorderThread(record);
+
+    // TODO: switch to while loop to not terminate on everything
+    //std::string userInput;
+    std::cin.ignore(); // >> userInput;
+
+    std::cout << "Exiting. Waiting recorder thread to finish...\n";
+    userTerminated = true;
+    recorderThread.join();
+
+    std::cout << "Bye!\n";
     
     return EXIT_SUCCESS;
 
