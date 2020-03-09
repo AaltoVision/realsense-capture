@@ -3,6 +3,7 @@
 //#include <librealsense2/rs.hpp>
 #include <librealsense2/rs.hpp>
 #include <recorder.hpp>
+//#include <opencv2/opencv.hpp>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -149,7 +150,7 @@ int main(int argc, char * argv[]) try {
             //double dtime = time.count();    
             double ts = pose.get_timestamp();        
             // Print some values for user to see everything is working
-            //printPoseData(poseData, ts);
+            printPoseData(poseData, ts);
             // Store data to JSON
             recorder->addOdometryOutput({
                 .time = ts,
@@ -193,7 +194,7 @@ int 	get_bytes_per_pixel () const
 
                 // TODO: read numBytes from imageData
                 
-                std::cout << "Video frame " << index << ", " << vf.get_width() << "x" << vf.get_height() << "\n";
+                //std::cout << "Video frame " << index << ", " << vf.get_width() << "x" << vf.get_height() << "\n";
             }
 
             // Get and cast to video profile
