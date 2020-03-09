@@ -2,6 +2,12 @@
 
 Tool for capturing all output from Intel RealSense Tracking Camera T265.
 
+## Dependencies
+
+* odometry for Recoder library (included as git submodule) 
+* librealsense for Recoder library (included as git submodule)
+* OpenCV for writing video files (install opencv using your favorite package manager)
+
 ## Compile
 
 * Compile librealsense using their instructions (you can omit examples and such)

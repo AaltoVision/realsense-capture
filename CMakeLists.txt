@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(rscapture)
 
-#set(LIBREALSENSE_INCLUDE "librealsense/include")
-#set(LIBREALSENSE_BUILD "./librealsense/build")
-
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -O2 -lstdc++")
 
@@ -16,4 +13,5 @@ find_library(LOGURU_LIB loguru HINTS ./odometry/target)
 find_library(REALSENSE_LIB realsense2 HINTS ./librealsense/build)
 find_library(SDL2_LIB SDL2)
 find_library(M_LIB m)
-target_link_libraries(rscapture PUBLIC ${REALSENSE_LIB} ${SDL2_LIB} ${M_LIB} ${RECORDER_LIB} ${LOGURU_LIB})
+find_package(OpenCV 4 REQUIRED)
+target_link_libraries(rscapture PUBLIC ${REALSENSE_LIB} ${SDL2_LIB} ${M_LIB} ${RECORDER_LIB} ${LOGURU_LIB} ${OpenCV_LIBS})

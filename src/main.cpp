@@ -3,7 +3,7 @@
 //#include <librealsense2/rs.hpp>
 #include <librealsense2/rs.hpp>
 #include <recorder.hpp>
-//#include <opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -11,6 +11,7 @@
 #include <string>
 #include <iomanip>
 #include <sstream>
+#include <thread>
 
 std::string currentISO8601TimeUTC() {
   auto now = std::chrono::system_clock::now();
@@ -21,24 +22,12 @@ std::string currentISO8601TimeUTC() {
 }
 
 void printPoseData(rs2_pose& pose_data, double time) {
-    /*  
- typedef struct rs2_pose
- {
-     rs2_vector      translation;          
-     rs2_vector      velocity;             
-     rs2_vector      acceleration;         
-     rs2_quaternion  rotation;             
-     rs2_vector      angular_velocity;     
-     rs2_vector      angular_acceleration; 
-     unsigned int    tracker_confidence;   
-     unsigned int    mapper_confidence;    
- } rs2_pose;
-    */
     std::cout << "\r" << std::setprecision(3) << std::fixed
         << "Time[" << time << "]"
         << "Pos[" << pose_data.translation.x << "," <<  pose_data.translation.y << "," << pose_data.translation.z << "]"
         << ", Vel[" << pose_data.velocity.x << "," <<  pose_data.velocity.y << "," << pose_data.velocity.z << "]"
         << ", Acc[" << pose_data.acceleration.x << "," <<  pose_data.acceleration.y << "," << pose_data.acceleration.z << "]"
+        << ", Rot[" << pose_data.rotation.x << "," <<  pose_data.rotation.y << "," << pose_data.rotation.z << pose_data.rotation.w << "]"
         << "                                       ";
 }
 
@@ -77,7 +66,10 @@ int main(int argc, char * argv[]) try {
 
     // https://intelrealsense.github.io/librealsense/doxygen/structrs2__intrinsics.html
 
-    auto recorder = recorder::Recorder::build("output/recording-" + currentISO8601TimeUTC());
+
+    std::string startTimeString = currentISO8601TimeUTC();
+    auto recorder = recorder::Recorder::build("output/recording-" + startTimeString + ".json");
+    cv::VideoWriter* videoWriter1 = nullptr;
 
     std::mutex dataMutex;
 
@@ -150,7 +142,7 @@ int main(int argc, char * argv[]) try {
             //double dtime = time.count();    
             double ts = pose.get_timestamp();        
             // Print some values for user to see everything is working
-            printPoseData(poseData, ts);
+            //printPoseData(poseData, ts);
             // Store data to JSON
             recorder->addOdometryOutput({
                 .time = ts,
@@ -172,55 +164,33 @@ int main(int argc, char * argv[]) try {
             });
         }
 
-        // Cast to fisheye frame
+        // Cast to frameset that contains video feed
         auto frameset = frame.as<rs2::frameset>();        
-
-/*
-         	video_frame (const frame &f)
-int 	get_width () const
-int 	get_height () const
-int 	get_stride_in_bytes () const
-int 	get_bits_per_pixel () const
-int 	get_bytes_per_pixel () const
-*/
         if (frameset && frameset.get_profile().stream_type() == RS2_STREAM_FISHEYE && frameset.get_profile().format() == RS2_FORMAT_Y8) {            
             // Process feed from both cameras
-            for (int index = 0; index < 2; index++) {
+            for (int index = 0; index < 1; index++) { // TODO index should be 2
                 rs2::video_frame vf = frameset.get_fisheye_frame(index);
-                
-
                 const uint8_t* imageData = (const uint8_t*)(vf.get_data());
-                auto numBytes = vf.get_stride_in_bytes();
+                int width = vf.get_width();
+                int height = vf.get_height();
+                cv::Mat matFrame(height, width, CV_8UC1, (void*)imageData);
+                if (!videoWriter1) {
+                    // TODO: Write lens info here with recorder
+                    const std::string path = "output/recording-left-" + startTimeString + ".avi";
+                    const auto codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+                    const auto backend = cv::CAP_OPENCV_MJPEG;
+                    constexpr float fps = 30; // does not affect the image data, just how fast it's supposed to be played
+                    videoWriter1 = new cv::VideoWriter(path, backend, codec, fps, matFrame.size(), false);
+                }
+                videoWriter1->write(matFrame);
 
-                // TODO: read numBytes from imageData
-                
                 //std::cout << "Video frame " << index << ", " << vf.get_width() << "x" << vf.get_height() << "\n";
             }
-
-            // Get and cast to video profile
-            /*
-            auto videoProfile = video.get_profile().as<rs2::video_stream_profile>();
-            // TODO: Save metadata about lens etc. here?
-            int index = videoProfile.stream_index(); // 1 or 2
-            std::cout << "Video frame " << index << "\n";
-*/
-
-            // TODO: Process video here.
         }
     };
 
-
     // Start pipeline with chosen configuration
     auto profile = pipe.start(cfg, callback);
-
-    
-    // TODO: Read this stuff from frame profile within callback?
-    // Get fisheye sensor intrinsics parameters
-    // int fisheye_sensor_idx = 1 and then fisheye_sensor_idx = 2 to get both. Will probably be identical?
-    //rs2::stream_profile fisheye_stream = pipe_profile.get_stream(RS2_STREAM_FISHEYE, fisheye_sensor_idx);
-    //rs2_intrinsics intrinsics = fisheye_stream.as<rs2::video_stream_profile>().get_intrinsics();
-
-
 
     std::cout << "!!! Press Enter to stop !!!\n";
 
@@ -230,6 +200,10 @@ int 	get_bytes_per_pixel () const
     std::cout << "\nExiting. Waiting recorder thread to finish...\n";
     
     pipe.stop();
+
+    if (videoWriter1) {
+        delete videoWriter1;
+    }
 
     std::cout << "Bye!\n";
     
