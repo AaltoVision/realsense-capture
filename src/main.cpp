@@ -11,10 +11,6 @@
 #include <iomanip>
 #include <sstream>
 
-// 3rd party header for writing png files
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 std::string currentISO8601TimeUTC() {
   auto now = std::chrono::system_clock::now();
   auto itt = std::chrono::system_clock::to_time_t(now);
@@ -67,11 +63,11 @@ int main(int argc, char * argv[]) try {
     // RS2_STREAM_COUNT 
 
     // 6 Degrees of Freedom pose data, calculated by RealSense device
-    //fg.enable_stream(RS2_STREAM_POSE, RS2_FORMAT_6DOF /*, 15 (fps)*/);
+    cfg.enable_stream(RS2_STREAM_POSE, RS2_FORMAT_6DOF /*, 15 (fps)*/);
     // Native stream of gyroscope motion data produced by RealSense device
-    //cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
+    cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
     // Native stream of accelerometer motion data produced by RealSense device
-    //cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
+    cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
     // Native stream of fish-eye (wide) data captured from the dedicate motion camera
     // Note: It is not currently possible to enable only one
     cfg.enable_stream(RS2_STREAM_FISHEYE, 1, RS2_FORMAT_Y8);
@@ -192,9 +188,10 @@ int 	get_bytes_per_pixel () const
                 rs2::video_frame vf = frameset.get_fisheye_frame(index);
                 
 
-                const uint8_t* rgb_frame_data = (const uint8_t*)(vf.get_data());
+                const uint8_t* imageData = (const uint8_t*)(vf.get_data());
+                auto numBytes = vf.get_stride_in_bytes();
 
-                
+                // TODO: read numBytes from imageData
                 
                 std::cout << "Video frame " << index << ", " << vf.get_width() << "x" << vf.get_height() << "\n";
             }
