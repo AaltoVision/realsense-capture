@@ -64,20 +64,28 @@ int main(int argc, char * argv[]) try {
 
     // The callback is executed on a sensor thread and can be called simultaneously from multiple sensors
     // Therefore any modification to common memory should be done under lock
+    double firstMeasurementTime = -1.;
     auto callback = [&](const rs2::frame& frame) {
         std::lock_guard<std::mutex> lock(dataMutex);
+
+        // Convert timestamp to seconds after first measurement
+        double timeStamp = frame.get_timestamp();
+        if (firstMeasurementTime < 0.0) {
+            firstMeasurementTime = timeStamp;
+        }
+        timeStamp = (timeStamp - firstMeasurementTime) / 1000.;
 
         // Cast the frame that arrived to motion frame, accelerometer + gyro
         auto motion = frame.as<rs2::motion_frame>();
         // If casting succeeded and the arrived frame is from gyro stream
         if (motion && motion.get_profile().stream_type() == RS2_STREAM_GYRO && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F) {
             rs2_vector gyro_data = motion.get_motion_data();
-            recorder->addGyroscope(motion.get_timestamp(), gyro_data.x, gyro_data.y, gyro_data.z);
+            recorder->addGyroscope(timeStamp, gyro_data.x, gyro_data.y, gyro_data.z);
         }
         // If casting succeeded and the arrived frame is from accelerometer stream
         if (motion && motion.get_profile().stream_type() == RS2_STREAM_ACCEL && motion.get_profile().format() == RS2_FORMAT_MOTION_XYZ32F) {
             rs2_vector accel_data = motion.get_motion_data();
-            recorder->addAccelerometer(motion.get_timestamp(), accel_data.x, accel_data.y, accel_data.z);
+            recorder->addAccelerometer(timeStamp, accel_data.x, accel_data.y, accel_data.z);
         }
 
         // Cast to pose frame
@@ -85,7 +93,7 @@ int main(int argc, char * argv[]) try {
         if (pose && pose.get_profile().stream_type() == RS2_STREAM_POSE && pose.get_profile().format() == RS2_FORMAT_6DOF) {
             auto poseData = pose.get_pose_data();
             // Print some values for user to see everything is working
-            printPoseData(poseData, pose.get_timestamp());
+            printPoseData(poseData, timeStamp);
             // Store data to JSON
             recorder->addOdometryOutput({
                 .time = pose.get_timestamp(),
@@ -118,9 +126,9 @@ int main(int argc, char * argv[]) try {
                 auto vprofile = vf.get_profile().as<rs2::video_stream_profile>();
                 auto intrinsics = vprofile.get_intrinsics();
                 recorder::Recorder::FrameData frameData({
-                    .t = vf.get_timestamp(),
+                    .t = timeStamp,
                    .cameraInd = index,
-                   .focalLength = intrinsics.fx,
+                   .focalLength = intrinsics.fx, // TODO: intrinsics.fy is also available, should it be used?
                    .px = intrinsics.ppx,
                    .py = intrinsics.ppy
                 });
