@@ -24,7 +24,7 @@ std::string currentISO8601TimeUTC() {
 void printPoseData(rs2_pose& pose_data, double time) {
     std::cout << "\r" << std::setprecision(3) << std::fixed
         << "Time[" << time << "]"
-        << "Pos[" << pose_data.translation.x << "," <<  pose_data.translation.y << "," << pose_data.translation.z << "]"
+        << ", Pos[" << pose_data.translation.x << "," <<  pose_data.translation.y << "," << pose_data.translation.z << "]"
         << ", Vel[" << pose_data.velocity.x << "," <<  pose_data.velocity.y << "," << pose_data.velocity.z << "]"
         << ", Acc[" << pose_data.acceleration.x << "," <<  pose_data.acceleration.y << "," << pose_data.acceleration.z << "]"
         << ", Rot[" << pose_data.rotation.x << "," <<  pose_data.rotation.y << "," << pose_data.rotation.z << pose_data.rotation.w << "]"
