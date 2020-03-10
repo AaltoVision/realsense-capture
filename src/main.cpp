@@ -1,6 +1,3 @@
-// License: Apache 2.0. See LICENSE file in root directory.
-// Copyright(c) 2019 Intel Corporation. All Rights Reserved.
-//#include <librealsense2/rs.hpp>
 #include <librealsense2/rs.hpp>
 #include <recorder.hpp>
 #include <opencv2/opencv.hpp>
@@ -57,7 +54,7 @@ int main(int argc, char * argv[]) try {
     cfg.enable_stream(RS2_STREAM_FISHEYE, 1, RS2_FORMAT_Y8);
     cfg.enable_stream(RS2_STREAM_FISHEYE, 2, RS2_FORMAT_Y8);
 
-    auto recorder = recorder::Recorder::build(outputPrefix + ".json");
+    auto recorder = recorder::Recorder::build(outputPrefix + ".jsonl");
     cv::VideoWriter* videoWriters[2];
 
     std::mutex dataMutex;
