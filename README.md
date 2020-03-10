@@ -32,6 +32,13 @@ recording-2020-03-10T13-11-11Z-right.avi
 recording-2020-03-10T13-11-11Z.jsonl
 ```
 
+Information about the camera lenses is also stored to jsonl. This is only stored once, for example:
+
+```
+{"cameraInd":0,"coeffs":[-0.00200599804520607,0.03895416110754013,-0.03715667128562927,0.0061612860299646854,0.0],"model":"RS2_DISTORTION_KANNALA_BRANDT4"}
+{"cameraInd":1,"coeffs":[-0.002046247012913227,0.037283919751644135,-0.03449400141835213,0.005099817179143429,0.0],"model":"RS2_DISTORTION_KANNALA_BRANDT4"}
+```
+
 # Device spec
 
 More detailed info about T265 hardware: https://github.com/IntelRealSense/librealsense/blob/master/doc/t265.md

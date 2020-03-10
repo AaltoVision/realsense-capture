@@ -11,6 +11,19 @@
 #include <thread>
 #include <vector>
 
+std::string distortionToString(rs2_distortion distortionModel) {
+    switch(distortionModel) {
+        case rs2_distortion::RS2_DISTORTION_NONE: return "RS2_DISTORTION_NONE";
+        case rs2_distortion::RS2_DISTORTION_MODIFIED_BROWN_CONRADY: return "RS2_DISTORTION_MODIFIED_BROWN_CONRADY";
+        case rs2_distortion::RS2_DISTORTION_INVERSE_BROWN_CONRADY: return "RS2_DISTORTION_INVERSE_BROWN_CONRADY";
+        case rs2_distortion::RS2_DISTORTION_FTHETA: return "RS2_DISTORTION_FTHETA";
+        case rs2_distortion::RS2_DISTORTION_BROWN_CONRADY: return "RS2_DISTORTION_BROWN_CONRADY";
+        case rs2_distortion::RS2_DISTORTION_KANNALA_BRANDT4: return "RS2_DISTORTION_KANNALA_BRANDT4";
+        case rs2_distortion::RS2_DISTORTION_COUNT: return "RS2_DISTORTION_COUNT";
+    }
+    return "UNKNOWN";
+}
+
 std::string currentISO8601TimeUTC() {
   auto now = std::chrono::system_clock::now();
   auto itt = std::chrono::system_clock::to_time_t(now);
@@ -144,6 +157,17 @@ int main(int argc, char * argv[]) try {
                     const auto backend = cv::CAP_OPENCV_MJPEG;
                     const auto fps = (float)vprofile.fps();
                     videoWriters[index] = new cv::VideoWriter(path, backend, codec, fps, grayFrame.size(), true);
+
+                    // Store lens metadata once
+                    nlohmann::json lensMetadata;
+                    lensMetadata["model"] = distortionToString(intrinsics.model);
+                    auto coeffs = nlohmann::json::array();
+                    for(auto i = 0; i < 5; ++i) {
+                        coeffs.push_back(intrinsics.coeffs[i]);
+                    }
+                    lensMetadata["coeffs"] = coeffs;
+                    lensMetadata["cameraInd"] = index;
+                    recorder->addJson(lensMetadata);
                 }
                 cv::Mat colorFrame; // Grayscale video is only supported on Windows, so we must convert to BGR
                 cv::cvtColor(grayFrame, colorFrame, cv::COLOR_GRAY2BGR);
