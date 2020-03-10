@@ -18,9 +18,10 @@ Tool for capturing all output from Intel RealSense Tracking Camera T265.
 
 ## Run
 
+* Make output directory if it doesn't exist yet `mkdir output`
 * Run the program from the root dir i.e. `cd ..` if you are in target/, then `target/rscapture`
 * Stop recording with Enter
-* Output is stored under output/ dir timestamp from when recording started
+* Output is stored under output/ dir with filenames including a timestamp from when recording started
 
 ## Example output
 
