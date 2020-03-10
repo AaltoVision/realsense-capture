@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 std::string currentISO8601TimeUTC() {
   auto now = std::chrono::system_clock::now();
@@ -110,18 +111,20 @@ int main(int argc, char * argv[]) try {
         auto frameset = frame.as<rs2::frameset>();
         if (frameset && frameset.get_profile().stream_type() == RS2_STREAM_FISHEYE && frameset.get_profile().format() == RS2_FORMAT_Y8) {
             // Process feed from both cameras
+            std::vector<recorder::Recorder::FrameData> frameGroup;
             for (int index = 0; index < 2; index++) {
                 rs2::video_frame vf = frameset.get_fisheye_frame(index + 1); // Camera index starts at 1
                 // Save frame metadata
                 auto vprofile = vf.get_profile().as<rs2::video_stream_profile>();
                 auto intrinsics = vprofile.get_intrinsics();
-                recorder->addFrame({
+                recorder::Recorder::FrameData frameData({
                     .t = vf.get_timestamp(),
                    .cameraInd = index,
-                   .focalLength = intrinsics.fx / intrinsics.ppx, // TODO: Is this right?
+                   .focalLength = intrinsics.fx,
                    .px = intrinsics.ppx,
                    .py = intrinsics.ppy
                 });
+                frameGroup.push_back(frameData);
                 // Save frame
                 const uint8_t* imageData = (const uint8_t*)(vf.get_data());
                 int width = vf.get_width();
@@ -138,6 +141,7 @@ int main(int argc, char * argv[]) try {
                 cv::cvtColor(grayFrame, colorFrame, cv::COLOR_GRAY2BGR);
                 videoWriters[index]->write(colorFrame);
             }
+            recorder->addFrameGroup(frameGroup[0].t, frameGroup);
         }
     };
 
