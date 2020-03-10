@@ -74,6 +74,9 @@ int main(int argc, char * argv[]) try {
             firstMeasurementTime = timeStamp;
         }
         timeStamp = (timeStamp - firstMeasurementTime) / 1000.;
+        if (timeStamp <= 0.0) { // Ensure time is always non-zero and positive
+            timeStamp = 0.00000001;
+        }
 
         // Cast the frame that arrived to motion frame, accelerometer + gyro
         auto motion = frame.as<rs2::motion_frame>();
