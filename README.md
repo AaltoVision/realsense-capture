@@ -5,13 +5,16 @@ Tool for capturing all output from Intel RealSense Tracking Camera T265.
 ## Dependencies
 
 * odometry for Recoder library (included as git submodule)
-* librealsense for Recoder library (included as git submodule)
+* librealsense for Recoder library (included as git submodule, optional for Linux)
 * OpenCV for writing video files (install opencv using your favorite package manager)
 
 ## Compile
 
-* Compile librealsense using their instructions (you can omit examples and such)
-* Compile odometry (or at least recorder lib)
+* Install librealsense using their instructions
+  - on Linux, it's highly recommended to install the prebuilt packages as instructed [here](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md)... unless you are comfortable with manually compiling and installing kernel modules.
+   The Ubuntu packages also seem to work on Debian and also with kernel versions not on their list: Successfully tested on Debian Stretch with Linux kernel 4.14 by installing `librealsense2-dkms`, `librealsense2-utils` and `librealsense2-dev` from Intel's Ubuntu Xenial repository (because Xenial has kernel 4.4, which is older than the 4.14 in Stretch). Note that then you do not have to even checkout the `librealsense` submodule
+* Compile odometry (or at least recorder lib). Note that if you are really lazy and have an existing installation, just `rmdir odometry` and symlink: `ln -s /path/to/existing/odometry .`. Then you do not have to recompile
+* Install `libsdl2-dev` from package management (on Linux)
 * Create build dir `mkdir target`
 * Go to build dir `cd target`
 * Cmake and make the build `cmake .. && make`
