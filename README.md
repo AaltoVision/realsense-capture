@@ -46,3 +46,15 @@ Information about the camera lenses is also stored to jsonl. This is only stored
 # Device spec
 
 More detailed info about T265 hardware: https://github.com/IntelRealSense/librealsense/blob/master/doc/t265.md
+
+# Remote control via Firebase
+
+1. Install Firebase tools (`sudo`) `pip install --upgrade firebase-admin`
+2. Get a Firebase Admin Service JSON key (should not be needed, but easier this way)
+   and set the path pointing to it in `src/remote.py`
+2. (optional) Disable hibernate on laptop lid close.
+   Linux: run `systemd-inhibit --what=handle-lid-switch sleep 1d` and leave
+   that terminal window open (Ctrl+C releases the hibernation lock)
+3. Run `python src/remote.py`
+4. In a special version of `android-viotester`, starting and stopping recording
+   will now automatically start & stop `target/rscapture`.

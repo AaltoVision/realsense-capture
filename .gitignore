@@ -5,7 +5,7 @@ output
 target
 
 # Firebase credentials
-*-firebase-*.json
+firebase-admin.json
 
 # Python virtualenv
 venv/
