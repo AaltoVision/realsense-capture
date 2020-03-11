@@ -123,7 +123,7 @@ int main(int argc, char * argv[]) try {
             printPoseData(poseData, timeStamp);
             // Store data to JSON
             recorder->addOdometryOutput({
-                .time = pose.get_timestamp(),
+                .time = timeStamp,
                 .position = {
                     .x = poseData.translation.x,
                     .y = poseData.translation.y,
