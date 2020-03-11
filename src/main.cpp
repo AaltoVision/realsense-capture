@@ -47,6 +47,10 @@ int main(int argc, char * argv[]) try {
 
     std::cout << "Connecting to device...\n";
 
+    constexpr bool RECORD_VIDEO = true;
+    constexpr bool RECORD_POSE = true;
+    constexpr bool RECORD_IMU = true;
+
     auto startTime = std::chrono::high_resolution_clock::now();
     auto startTimeString = currentISO8601TimeUTC();
     auto outputPrefix = "output/recording-" + startTimeString;
@@ -56,19 +60,29 @@ int main(int argc, char * argv[]) try {
     // Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
 
-    // 6 Degrees of Freedom pose data, calculated by RealSense device
-    cfg.enable_stream(RS2_STREAM_POSE, RS2_FORMAT_6DOF /*, 15 (fps)*/);
-    // Native stream of gyroscope motion data produced by RealSense device
-    cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
-    // Native stream of accelerometer motion data produced by RealSense device
-    cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
-    // Native stream of fish-eye (wide) data captured from the dedicate motion camera
-    // Note: It is not currently possible to enable only one
-    cfg.enable_stream(RS2_STREAM_FISHEYE, 1, RS2_FORMAT_Y8);
-    cfg.enable_stream(RS2_STREAM_FISHEYE, 2, RS2_FORMAT_Y8);
+    if (RECORD_POSE) {
+      // 6 Degrees of Freedom pose data, calculated by RealSense device
+      cfg.enable_stream(RS2_STREAM_POSE, RS2_FORMAT_6DOF /*, 15 (fps)*/);
+    }
+
+    if (RECORD_IMU) {
+      // Native stream of gyroscope motion data produced by RealSense device
+      cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
+      // Native stream of accelerometer motion data produced by RealSense device
+      cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
+    }
+
+    if (RECORD_VIDEO) {
+      // Native stream of fish-eye (wide) data captured from the dedicate motion camera
+      // Note: It is not currently possible to enable only one
+      cfg.enable_stream(RS2_STREAM_FISHEYE, 1, RS2_FORMAT_Y8);
+      cfg.enable_stream(RS2_STREAM_FISHEYE, 2, RS2_FORMAT_Y8);
+    }
 
     auto recorder = recorder::Recorder::build(outputPrefix + ".jsonl");
-    cv::VideoWriter* videoWriters[2];
+    cv::VideoWriter* videoWriters[2] = { nullptr, nullptr };
+    // reuse for color conversion to avoid memory allocation on each frame
+    cv::Mat colorFrame;
 
     std::mutex dataMutex;
 
@@ -148,6 +162,8 @@ int main(int argc, char * argv[]) try {
                 frameGroup.push_back(frameData);
                 // Save frame
                 const uint8_t* imageData = (const uint8_t*)(vf.get_data());
+                assert(imageData != nullptr);
+
                 int width = vf.get_width();
                 int height = vf.get_height();
                 cv::Mat grayFrame(height, width, CV_8UC1, (void*)imageData);
@@ -156,7 +172,11 @@ int main(int argc, char * argv[]) try {
                     const auto codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
                     const auto backend = cv::CAP_OPENCV_MJPEG;
                     const auto fps = (float)vprofile.fps();
-                    videoWriters[index] = new cv::VideoWriter(path, backend, codec, fps, grayFrame.size(), true);
+
+                    std::cout << "Recording video to " << path << std::endl;
+                    auto videoWriter = new cv::VideoWriter(path, backend, codec, fps, grayFrame.size(), true);
+                    assert(videoWriter != nullptr);
+                    videoWriters[index] = videoWriter;
 
                     // Store lens metadata once
                     nlohmann::json lensMetadata;
@@ -169,7 +189,7 @@ int main(int argc, char * argv[]) try {
                     lensMetadata["cameraInd"] = index;
                     recorder->addJson(lensMetadata);
                 }
-                cv::Mat colorFrame; // Grayscale video is only supported on Windows, so we must convert to BGR
+                // Grayscale video is only supported on Windows, so we must convert to BGR
                 cv::cvtColor(grayFrame, colorFrame, cv::COLOR_GRAY2BGR);
                 videoWriters[index]->write(colorFrame);
             }
