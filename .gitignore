@@ -3,3 +3,9 @@ realsense-capture.code-workspace
 build
 output
 target
+
+# Firebase credentials
+*-firebase-*.json
+
+# Python virtualenv
+venv/
