@@ -14,9 +14,8 @@ add_subdirectory("jsonl-recorder")
 find_library(REALSENSE_LIB realsense2 HINTS ./librealsense/build)
 find_library(SDL2_LIB SDL2)
 find_library(M_LIB m)
-set(LOCAL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/odometry/build/host")
 find_package(Threads REQUIRED)
-find_package(OpenCV 4 REQUIRED PATHS "${LOCAL_PREFIX}/lib/cmake/opencv4")
+find_package(OpenCV 4 REQUIRED)
 target_link_libraries(rscapture PRIVATE
   ${REALSENSE_LIB}
   ${SDL2_LIB}
