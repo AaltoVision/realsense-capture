@@ -6,21 +6,22 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -O2 -lstdc++")
 
 add_executable(rscapture src/main.cpp)
 
-include_directories(rscapture ./ ./odometry/recorder ./odometry/lib/json/include ./librealsense/include)
-
-find_library(RECORDER_LIB recorder HINTS ./odometry/target/recorder)
-find_library(LOGURU_LIB loguru HINTS ./odometry/target)
+option (JSON_BuildTests "Build nlohmann_json unit tests" ON)
+set(JSON_BuildTests OFF)
+add_subdirectory("json")
+include_directories(rscapture ./ ./jsonl-recorder ./librealsense/include)
+add_subdirectory("jsonl-recorder")
 find_library(REALSENSE_LIB realsense2 HINTS ./librealsense/build)
 find_library(SDL2_LIB SDL2)
 find_library(M_LIB m)
 set(LOCAL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/odometry/build/host")
 find_package(Threads REQUIRED)
 find_package(OpenCV 4 REQUIRED PATHS "${LOCAL_PREFIX}/lib/cmake/opencv4")
-find_library(DL_LIBRARY NAMES dl)
-if (EXISTS ${DL_LIBRARY})
-  message(STATUS "the dl (dynamic linking) library ${DL_LIBRARY} exists, adding it for loguru")
-  list(APPEND LOGGING_LIBS ${DL_LIBRARY})
-else()
-  set(DL_LIBRARY "")
-endif()
-target_link_libraries(rscapture PUBLIC ${REALSENSE_LIB} ${SDL2_LIB} ${M_LIB} ${RECORDER_LIB} ${LOGURU_LIB} ${OpenCV_LIBS} ${DL_LIBRARY} Threads::Threads)
+target_link_libraries(rscapture PRIVATE
+  ${REALSENSE_LIB}
+  ${SDL2_LIB}
+  ${M_LIB}
+  ${OpenCV_LIBS}
+  nlohmann_json::nlohmann_json
+  recorder
+  Threads::Threads)

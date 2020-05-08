@@ -146,13 +146,13 @@ int main(int argc, char * argv[]) try {
         auto frameset = frame.as<rs2::frameset>();
         if (frameset && frameset.get_profile().stream_type() == RS2_STREAM_FISHEYE && frameset.get_profile().format() == RS2_FORMAT_Y8) {
             // Process feed from both cameras
-            std::vector<recorder::Recorder::FrameData> frameGroup;
+            std::vector<recorder::FrameData> frameGroup;
             for (int index = 0; index < 2; index++) {
                 rs2::video_frame vf = frameset.get_fisheye_frame(index + 1); // Camera index starts at 1
                 // Save frame metadata
                 auto vprofile = vf.get_profile().as<rs2::video_stream_profile>();
                 auto intrinsics = vprofile.get_intrinsics();
-                recorder::Recorder::FrameData frameData({
+                recorder::FrameData frameData({
                     .t = timeStamp,
                    .cameraInd = index,
                    .focalLength = intrinsics.fx, // TODO: intrinsics.fy is also available, should it be used?
