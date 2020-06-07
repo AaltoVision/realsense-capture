@@ -8,7 +8,7 @@ from os.path import join
 
 def get_rs_video_file_names(jsonl_path):
     base = jsonl_path.rpartition('.jsonl')[0]
-    return (base + '-left.avi', base + '-right.avi')
+    return (base + '-video.avi', base + '-video2.avi')
 
 def parse_args():
     import argparse

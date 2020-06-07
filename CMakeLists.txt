@@ -8,8 +8,8 @@ add_executable(rscapture src/main.cpp)
 
 option (JSON_BuildTests "Build nlohmann_json unit tests" ON)
 set(JSON_BuildTests OFF)
-add_subdirectory("json")
-include_directories(rscapture ./ ./jsonl-recorder ./librealsense/include)
+include_directories(rscapture ./ ./librealsense/include)
+set(USE_OPENCV_VIDEO_RECORDING ON CACHE INTERNAL "")
 add_subdirectory("jsonl-recorder")
 find_library(REALSENSE_LIB realsense2 HINTS ./librealsense/build)
 find_library(SDL2_LIB SDL2)
@@ -21,6 +21,5 @@ target_link_libraries(rscapture PRIVATE
   ${SDL2_LIB}
   ${M_LIB}
   ${OpenCV_LIBS}
-  nlohmann_json::nlohmann_json
-  recorder
+  jsonl-recorder
   Threads::Threads)
