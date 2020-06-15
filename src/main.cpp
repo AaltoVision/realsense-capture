@@ -1,5 +1,5 @@
 #include <librealsense2/rs.hpp>
-#include <recorder.hpp>
+#include <jsonl-recorder/recorder.hpp>
 #include <opencv2/opencv.hpp>
 #include <fstream>
 #include <iostream>
@@ -79,10 +79,10 @@ int main(int argc, char * argv[]) try {
       cfg.enable_stream(RS2_STREAM_FISHEYE, 2, RS2_FORMAT_Y8);
     }
 
-    auto recorder = recorder::Recorder::build(outputPrefix + ".jsonl");
-    cv::VideoWriter* videoWriters[2] = { nullptr, nullptr };
+    auto recorder = recorder::Recorder::build(outputPrefix + ".jsonl", outputPrefix + "-video.avi");
+    bool videoInitialized[2] = { false, false };
     // reuse for color conversion to avoid memory allocation on each frame
-    cv::Mat colorFrame;
+    cv::Mat colorFrames[2];
 
     std::mutex dataMutex;
 
@@ -152,14 +152,7 @@ int main(int argc, char * argv[]) try {
                 // Save frame metadata
                 auto vprofile = vf.get_profile().as<rs2::video_stream_profile>();
                 auto intrinsics = vprofile.get_intrinsics();
-                recorder::FrameData frameData({
-                    .t = timeStamp,
-                   .cameraInd = index,
-                   .focalLength = intrinsics.fx, // TODO: intrinsics.fy is also available, should it be used?
-                   .px = intrinsics.ppx,
-                   .py = intrinsics.ppy
-                });
-                frameGroup.push_back(frameData);
+
                 // Save frame
                 const uint8_t* imageData = (const uint8_t*)(vf.get_data());
                 assert(imageData != nullptr);
@@ -167,16 +160,22 @@ int main(int argc, char * argv[]) try {
                 int width = vf.get_width();
                 int height = vf.get_height();
                 cv::Mat grayFrame(height, width, CV_8UC1, (void*)imageData);
-                if (!videoWriters[index]) {
-                    const std::string path = outputPrefix + "-" + (index == 0 ? "left" : "right") + ".avi";
-                    const auto codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
-                    const auto backend = cv::CAP_OPENCV_MJPEG;
-                    const auto fps = (float)vprofile.fps();
 
-                    std::cout << "Recording video to " << path << std::endl;
-                    auto videoWriter = new cv::VideoWriter(path, backend, codec, fps, grayFrame.size(), true);
-                    assert(videoWriter != nullptr);
-                    videoWriters[index] = videoWriter;
+                // Grayscale video is only supported on Windows, so we must convert to BGR
+                cv::cvtColor(grayFrame, colorFrames[index], cv::COLOR_GRAY2BGR);
+
+                recorder::FrameData frameData({
+                   .t = timeStamp,
+                   .cameraInd = index,
+                   .focalLength = intrinsics.fx, // TODO: intrinsics.fy is also available, should it be used?
+                   .px = intrinsics.ppx,
+                   .py = intrinsics.ppy,
+                   .frameData = colorFrames + index
+                });
+                frameGroup.push_back(frameData);
+                if (!videoInitialized[index]) {
+                    recorder->setVideoRecordingFps((float)vprofile.fps());
+                    videoInitialized[index] = true;
 
                     // Store lens metadata once
                     nlohmann::json lensMetadata;
@@ -189,9 +188,6 @@ int main(int argc, char * argv[]) try {
                     lensMetadata["cameraInd"] = index;
                     recorder->addJson(lensMetadata);
                 }
-                // Grayscale video is only supported on Windows, so we must convert to BGR
-                cv::cvtColor(grayFrame, colorFrame, cv::COLOR_GRAY2BGR);
-                videoWriters[index]->write(colorFrame);
             }
             recorder->addFrameGroup(frameGroup[0].t, frameGroup);
         }
@@ -208,10 +204,6 @@ int main(int argc, char * argv[]) try {
     std::cout << "\nExiting. Waiting recorder thread to finish...\n";
 
     pipe.stop();
-
-    for (int index = 0; index < 2; index++) {
-        delete videoWriters[index];
-    }
 
     std::cout << "Bye!\n";
 
