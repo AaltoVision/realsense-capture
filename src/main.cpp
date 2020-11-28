@@ -167,7 +167,8 @@ int main(int argc, char * argv[]) try {
                 recorder::FrameData frameData({
                    .t = timeStamp,
                    .cameraInd = index,
-                   .focalLength = intrinsics.fx, // TODO: intrinsics.fy is also available, should it be used?
+                   .focalLengthX = intrinsics.fx,
+                   .focalLengthY = intrinsics.fy,
                    .px = intrinsics.ppx,
                    .py = intrinsics.ppy,
                    .frameData = colorFrames + index
