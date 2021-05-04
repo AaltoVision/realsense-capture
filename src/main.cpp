@@ -44,6 +44,25 @@ void printPoseData(rs2_pose& pose_data, double time) {
 }
 
 int main(int argc, char * argv[]) try {
+    bool quietMode = false;
+    if (argc >= 2) {
+        std::string arg1 = argv[1];
+        if (arg1 == "quiet") {
+            std::cout << "Quiet mode enabled, pose won't be printed to stdout" << std::endl;
+            quietMode = true;
+        }
+    }
+
+    // Attempt hardware reset to ensure device will work properly
+    std::cout << "Reseting T265 to ensure smooth operation..." << std::endl;
+    {
+        rs2::config resetCfg;
+        rs2::pipeline resetPipe;
+        resetCfg.resolve(resetPipe).get_device().hardware_reset();
+        // Give device some time to recover just in case
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+    std::cout << "Reset completed!" << std::endl;
 
     std::cout << "Connecting to device...\n";
 
@@ -51,7 +70,6 @@ int main(int argc, char * argv[]) try {
     constexpr bool RECORD_POSE = true;
     constexpr bool RECORD_IMU = true;
 
-    auto startTime = std::chrono::high_resolution_clock::now();
     auto startTimeString = currentISO8601TimeUTC();
     auto outputPrefix = "output/recording-" + startTimeString;
 
@@ -87,19 +105,21 @@ int main(int argc, char * argv[]) try {
     std::mutex dataMutex;
 
     // The callback is executed on a sensor thread and can be called simultaneously from multiple sensors
-    // Therefore any modification to common memory should be done under lock
+    // Therefore any modification to common memory should be done under lock. recorder is thread safe.
     double firstMeasurementTime = -1.;
     auto callback = [&](const rs2::frame& frame) {
-        std::lock_guard<std::mutex> lock(dataMutex);
-
         // Convert timestamp to seconds after first measurement
         double timeStamp = frame.get_timestamp();
-        if (firstMeasurementTime < 0.0) {
-            firstMeasurementTime = timeStamp;
-        }
-        timeStamp = (timeStamp - firstMeasurementTime) / 1000.;
-        if (timeStamp <= 0.0) { // Ensure time is always non-zero and positive
-            timeStamp = 0.00000001;
+        {
+            // TODO: Overkill to lock every call just to set firstMeasurementTime?
+            std::lock_guard<std::mutex> lock(dataMutex);
+            if (firstMeasurementTime < 0.0) {
+                firstMeasurementTime = timeStamp;
+            }
+            timeStamp = (timeStamp - firstMeasurementTime) / 1000.;
+            if (timeStamp <= 0.0) { // Ensure time is always non-zero and positive
+                timeStamp = 0.00000001;
+            }
         }
 
         // Cast the frame that arrived to motion frame, accelerometer + gyro
@@ -120,7 +140,7 @@ int main(int argc, char * argv[]) try {
         if (pose && pose.get_profile().stream_type() == RS2_STREAM_POSE && pose.get_profile().format() == RS2_FORMAT_6DOF) {
             auto poseData = pose.get_pose_data();
             // Print some values for user to see everything is working
-            printPoseData(poseData, timeStamp);
+            if (!quietMode) printPoseData(poseData, timeStamp);
             // Store data to JSON
             recorder->addOdometryOutput({
                 .time = timeStamp,
