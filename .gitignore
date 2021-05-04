@@ -9,3 +9,4 @@ firebase-admin.json
 
 # Python virtualenv
 venv/
+.vscode
