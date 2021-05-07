@@ -100,7 +100,7 @@ int main(int argc, char * argv[]) try {
     auto recorder = recorder::Recorder::build(outputPrefix + ".jsonl", outputPrefix + "-video.avi");
     bool videoInitialized[2] = { false, false };
     // reuse for color conversion to avoid memory allocation on each frame
-    cv::Mat colorFrames[2];
+    std::vector<cv::Mat> colorFrames;
 
     std::mutex dataMutex;
 
@@ -182,6 +182,9 @@ int main(int argc, char * argv[]) try {
                 cv::Mat grayFrame(height, width, CV_8UC1, (void*)imageData);
 
                 // Grayscale video is only supported on Windows, so we must convert to BGR
+                if (index == 0)
+                    if (!recorder->getEmptyFrames(2, timeStamp, width, height, CV_8UC3, colorFrames))
+                        return; // No free space to allocate frames, drop them, getEmptyFrames() writes jsonl
                 cv::cvtColor(grayFrame, colorFrames[index], cv::COLOR_GRAY2BGR);
 
                 recorder::FrameData frameData({
@@ -191,7 +194,7 @@ int main(int argc, char * argv[]) try {
                    .focalLengthY = intrinsics.fy,
                    .px = intrinsics.ppx,
                    .py = intrinsics.ppy,
-                   .frameData = colorFrames + index
+                   .frameData = &colorFrames[index]
                 });
                 frameGroup.push_back(frameData);
                 if (!videoInitialized[index]) {
@@ -210,7 +213,7 @@ int main(int argc, char * argv[]) try {
                     recorder->addJson(lensMetadata);
                 }
             }
-            recorder->addFrameGroup(frameGroup[0].t, frameGroup);
+            recorder->addFrameGroup(frameGroup[0].t, frameGroup, false);
         }
     };
 
