@@ -107,6 +107,7 @@ int main(int argc, char * argv[]) try {
     // The callback is executed on a sensor thread and can be called simultaneously from multiple sensors
     // Therefore any modification to common memory should be done under lock. recorder is thread safe.
     double firstMeasurementTime = -1.;
+    double lastFrameTimestamp = -1.;
     auto callback = [&](const rs2::frame& frame) {
         // Convert timestamp to seconds after first measurement
         double timeStamp = frame.get_timestamp();
@@ -164,7 +165,10 @@ int main(int argc, char * argv[]) try {
 
         // Cast to frameset that contains video feed from all cameras
         auto frameset = frame.as<rs2::frameset>();
-        if (frameset && frameset.get_profile().stream_type() == RS2_STREAM_FISHEYE && frameset.get_profile().format() == RS2_FORMAT_Y8) {
+        if (frameset && frameset.get_profile().stream_type() == RS2_STREAM_FISHEYE
+            && frameset.get_profile().format() == RS2_FORMAT_Y8
+            && lastFrameTimestamp < timeStamp) {
+            lastFrameTimestamp = timeStamp;
             // Process feed from both cameras
             std::vector<recorder::FrameData> frameGroup;
             for (int index = 0; index < 2; index++) {
